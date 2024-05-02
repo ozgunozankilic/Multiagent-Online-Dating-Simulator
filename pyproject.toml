@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "catfish-sim"
-version = "0.1.0"
+version = "0.1.1"
 authors = [{ name = "Oz Kilic", email = "ozgunozankilic@gmail.com" }]
 description = "A multiagent online dating simulation framework."
 license = { file = "LICENSE" }
@@ -51,4 +51,4 @@ dev = ["pytest >= 7.4.3"]
 Homepage = "https://github.com/ozgunozankilic/catfish-sim"
 Repository = "https://github.com/ozgunozankilic/catfish-sim"
 Issues = "https://github.com/ozgunozankilic/catfish-sim/issues"
-Changelog = "https://github.com/ozgunozankilic/catfish-sim/CHANGELOG.md"
+Changelog = "https://github.com/ozgunozankilic/catfish-sim/blob/main/CHANGELOG.md"
