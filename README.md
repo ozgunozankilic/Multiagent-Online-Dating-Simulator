@@ -30,6 +30,10 @@ Dependencies:
 
 Older versions of some of the libraries are likely to work, but have not been tested. The Python version used in development was 3.10, although the software does not currently use any features implemented after version 3.6.
 
+### Documentation
+
+Please visit [https://catfish-sim.readthedocs.io/](https://catfish-sim.readthedocs.io/).
+
 ### Examples
 
 Example code will be added soon.
