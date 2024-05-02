@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "catfish-sim"
+version = "0.1.0"
+authors = [{ name = "Oz Kilic", email = "ozgunozankilic@gmail.com" }]
+description = "A multiagent online dating simulation framework."
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">= 3.6"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Sociology",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Games/Entertainment :: Simulation",
+]
+keywords = [
+    "online dating",
+    "simulation",
+    "multiagent",
+    "agent-based modeling",
+    "social simulation",
+]
+
+dependencies = [
+    "numpy >= 1.23.3",
+    "pandas >= 1.5.0",
+    "scikit-learn >= 1.3.2",
+    "scipy >= 1.8.1",
+    "trueskill >= 0.4.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest >= 7.4.3"]
+
+[project.urls]
+Homepage = "https://github.com/ozgunozankilic/catfish-sim"
+Repository = "https://github.com/ozgunozankilic/catfish-sim"
+Issues = "https://github.com/ozgunozankilic/catfish-sim/issues"
+Changelog = "https://github.com/ozgunozankilic/catfish-sim/CHANGELOG.md"

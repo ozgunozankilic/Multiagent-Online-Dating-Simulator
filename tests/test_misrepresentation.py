@@ -1,5 +1,5 @@
 import pytest
-from multiagent_online_dating_simulator import agents, compatibility, strategies
+from catfish_sim import agents, compatibility, strategies
 import copy
 import math
 
