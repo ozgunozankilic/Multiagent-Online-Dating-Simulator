@@ -1,3 +1,4 @@
+catfish-sim
 Sphinx==7.3.7
 sphinx-rtd-theme
 nbsphinx==0.9.4
