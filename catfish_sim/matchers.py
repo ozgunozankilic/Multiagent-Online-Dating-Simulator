@@ -265,6 +265,16 @@ class PreferentialAgentMatcher(AgentMatcher):
             recommendation_limit (int): Round-wise maximum number of agents that can be recommended.
             compatibility_calculator (CompatibilityCalculator): A CompatibilityCalculator object that will be used to
                 calculate the agent compatibilities.
+            judger_weight (float, optional): Judging agent's perspective weight to calculate the compatibility between
+                two agents. The judged agent's perspective weight is 1 - judger_weight. 1 means the recommendations
+                solely depend on the judging agent's preferences while 0.5 uses both parties preferences equally.
+                Defaults to 0.5.
+            logging (bool, optional): Toggles logging agent states after each round ends. Defaults to True.
+            log_eliminated (bool, optional): Toggles also logging agents who are eliminated from the simulation.
+                Defaults to False.
+            recalculate (bool, optional): Recalculates compatibilities for each new round. Must be set to True if agents
+                can change their attributes and preferences at any point. Alternatively, call the
+                generate_recommendation_priorities method with every new round. Defaults to False.
         """
         self.agents = agents
         # Agents' IDs must start from 0 and be sequential due to being used as indices.
@@ -318,9 +328,11 @@ class PreferentialAgentMatcher(AgentMatcher):
             )
 
         compatibilities = {
-            agent.id: self.compatibility[agent_id, agent.id]
-            if agent_id != agent.id
-            else -math.inf
+            agent.id: (
+                self.compatibility[agent_id, agent.id]
+                if agent_id != agent.id
+                else -math.inf
+            )
             for agent in self.agents
         }
 
@@ -369,9 +381,9 @@ class PreferentialAgentMatcher(AgentMatcher):
 
         compatibilities = [
             {
-                agent.id: self.compatibility[i, agent.id]
-                if i != agent.id
-                else -math.inf
+                agent.id: (
+                    self.compatibility[i, agent.id] if i != agent.id else -math.inf
+                )
                 for agent in self.agents
             }
             for i in range(0, len(self.agents))
@@ -550,6 +562,8 @@ class RankedAgentMatcher(AgentMatcher):
         agents,
         recommendation_limit,
         compatibility_calculator,
+        consider_dealbreakers=True,
+        dealbreaker_judger_weight=0.5,
         strict_recommendations=True,
         likes_as_draws=False,
         rank_passes=True,
@@ -557,6 +571,7 @@ class RankedAgentMatcher(AgentMatcher):
         rank_pass_from_higher=True,
         logging=True,
         log_eliminated=False,
+        recalculate=False,
     ):
         """Initiates the matcher with provided parameters.
 
@@ -565,6 +580,12 @@ class RankedAgentMatcher(AgentMatcher):
             recommendation_limit (int): Round-wise maximum number of agents that can be recommended.
             compatibility_calculator (CompatibilityCalculator): A CompatibilityCalculator object that will be used to
                 calculate the agent compatibilities.
+            consider_dealbreakers (bool, optional): If set to True, agent recommendations with negative compatibilities
+                are avoided. See dealbreaker_judger_weight for additional information. Defaults to True.
+            dealbreaker_judger_weight (float, optional): If consider_dealbreakers is set to True, this parameter
+                controls the weight used to calculate the weighted compatibility between the judging and judged agents
+                to check for negative compatibilities. 1 means only the deal-breakers of the judging agent is
+                considered, while 0.5 considers both parties deal-breakers equally. Defaults to 0.5.
             strict_recommendations (bool, optional): Determines whether the recommended agents have strictly the closest
                 ratings to the agent. Otherwise, recommendation_limit agents are sampled from the closest
                 recommendation_limit * 1.5 agents. Defaults to True.
@@ -576,6 +597,12 @@ class RankedAgentMatcher(AgentMatcher):
                 higher-rating agent's rating. Defaults to True.
             rank_pass_from_higher (bool, optional): Indicates whether a higher-rating agent's pass affects the
                 lower-rating agent's rating. Defaults to True.
+            logging (bool, optional): Toggles logging agent states after each round ends. Defaults to True.
+            log_eliminated (bool, optional): Toggles also logging agents who are eliminated from the simulation.
+                Defaults to False.
+            recalculate (bool, optional): Recalculates compatibilities for each new round. Must be set to True if agents
+                can change their attributes and preferences at any point. Alternatively, call the
+                calculate_compatibilities method with every new round. Defaults to False.
         """
         self.agents = agents
         # Agents' IDs must start from 0 and be sequential due to being used as indices.
@@ -590,6 +617,12 @@ class RankedAgentMatcher(AgentMatcher):
         self.waiting_matches = set()
         self.eliminated_agents = set()
         self.rating_logs = {agent_id: {} for agent_id in self.agent_ids}
+        self.consider_dealbreakers = consider_dealbreakers
+        if self.consider_dealbreakers:
+            self.compatibility = scipy.sparse.dok_matrix(
+                (len(self.agent_ids), len(self.agent_ids)), dtype=float
+            )
+        self.dealbreaker_judger_weight = dealbreaker_judger_weight
         self.strict_recommendations = strict_recommendations
         self.likes_as_draws = likes_as_draws
         self.rank_passes = rank_passes
@@ -597,6 +630,10 @@ class RankedAgentMatcher(AgentMatcher):
         self.rank_pass_from_higher = rank_pass_from_higher
         self.logging = logging
         self.log_eliminated = log_eliminated
+        self.recalculate = recalculate
+
+        if self.consider_dealbreakers:
+            self.calculate_compatibilities()
 
     def get_info(self):
         """Returns details of the matcher.
@@ -623,6 +660,10 @@ class RankedAgentMatcher(AgentMatcher):
         all_available = (
             self.agent_ids.difference(agent.get_assessed_candidates())
         ).difference(set([agent.id]).union(self.eliminated_agents))
+        if self.consider_dealbreakers:
+            all_available = [
+                id for id in all_available if self.compatibility[agent.id, id] >= 0
+            ]
         agent_rating = self.ratings[agent.id].mu
         sorted_ratings = {
             i: abs(rating.mu - agent_rating)
@@ -701,6 +742,41 @@ class RankedAgentMatcher(AgentMatcher):
                     self.ratings[agent_id] = agent_rating
         return True
 
+    def calculate_compatibilities(self):
+        """Calculates compatibilities using the compatibility scores and the judger weight to later check for
+        deal-breakers.
+        """
+        for i in range(0, len(self.agents) - 1):
+            for j in range(i + 1, len(self.agents)):
+                if i == j:
+                    continue
+
+                judger_compatibility = self.compatibility_calculator.get_compatibility(
+                    judger_attributes=self.agents[i].reported_attributes,
+                    judged_attributes=self.agents[j].reported_attributes,
+                )
+
+                judged_compatibility = self.compatibility_calculator.get_compatibility(
+                    judger_attributes=self.agents[j].reported_attributes,
+                    judged_attributes=self.agents[i].reported_attributes,
+                )
+
+                if self.dealbreaker_judger_weight == 1:
+                    self.compatibility[i, j] = judger_compatibility
+                    self.compatibility[j, i] = judged_compatibility
+                elif self.dealbreaker_judger_weight == 0:
+                    self.compatibility[i, j] = judged_compatibility
+                    self.compatibility[j, i] = judger_compatibility
+                else:
+                    self.compatibility[i, j] = (
+                        self.dealbreaker_judger_weight * judger_compatibility
+                        + (1 - self.dealbreaker_judger_weight) * judged_compatibility
+                    )
+                    self.compatibility[j, i] = (
+                        self.dealbreaker_judger_weight * judged_compatibility
+                        + (1 - self.dealbreaker_judger_weight) * judger_compatibility
+                    )
+
     def process_matches(self):
         """Processes matches by informing the agents about their match details.
 
@@ -723,6 +799,9 @@ class RankedAgentMatcher(AgentMatcher):
         Returns:
             bool: Returning True indicates the round is complete.
         """
+        if self.consider_dealbreakers and self.recalculate:
+            print("Re-calculating compatibilities for deal-breakers...")
+            self.calculate_compatibilities()
         self.round += 1
         round_likes = {}
         round_passes = {}

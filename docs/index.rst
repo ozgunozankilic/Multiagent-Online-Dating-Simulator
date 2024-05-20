@@ -11,6 +11,7 @@ Welcome to catfish-sim's documentation!
    :caption: Contents:
 
    modules
+   tutorials
 
 
 
