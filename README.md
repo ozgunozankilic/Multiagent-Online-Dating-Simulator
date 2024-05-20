@@ -36,7 +36,7 @@ Please visit [https://catfish-sim.readthedocs.io/](https://catfish-sim.readthedo
 
 ### Examples
 
-Example code will be added soon.
+A [getting started guide](https://catfish-sim.readthedocs.io/en/latest/examples/getting_started.html) is available.
 
 ## License
 
