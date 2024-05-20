@@ -142,16 +142,20 @@ class CategoricalPreference(Preference):
         preferred_score,
         nonpreferred_score,
         compatibility_weight=1,
+        ignore_unrecognized=True,
     ):
         """Initializes the categorical preference with the provided properties.
 
         Args:
             preferred_values (list): A list of preferred categorical attribute values.
-            allowed_values (list): A list of all possible categorical attribute values.
+            allowed_values (list): A list of all possible categorical attribute values. It is used to throw an error
+                with unrecognized values if ignore_unrecognized is set to False.
             preferred_score (float): Compatibility score when the attribute is preferred.
             nonpreferred_score (float): Compatibility score when the attribute is not preferred.
             compatibility_weight (float, optional): Weight multiplier used to set the attribute preference's weight in
                 the overall compatibility. Defaults to 1.
+            ignore_unrecognized (bool, optional): Specifies whether evaluating a value that is not included in
+                allowed_values should be ignored and yield the nonpreferred_score. Defaults to True.
         """
         super().__init__(
             preferred_values=preferred_values,
@@ -160,6 +164,7 @@ class CategoricalPreference(Preference):
             nonpreferred_score=nonpreferred_score,
             compatibility_weight=compatibility_weight,
         )
+        self.ignore_unrecognized = ignore_unrecognized
 
     def evaluate_attribute(self, value):
         """Evaluates a candidate's attribute, comparing it with the preferred values and returning an
@@ -171,13 +176,16 @@ class CategoricalPreference(Preference):
         Returns:
             float: Attribute-specific compatibility score.
         """
-        if value in self.preferred_values:
-            if type(self.preferred_score) is dict:
-                return self.preferred_score[value]
-            else:
-                return self.preferred_score
-        else:
+        if isinstance(self.preferred_score, dict) and value in self.preferred_score:
+            return self.preferred_score[value]
+        elif value in self.preferred_values:
+            return self.preferred_score
+        elif self.ignore_unrecognized:
             return self.nonpreferred_score
+        else:
+            raise ValueError(
+                f'The evaluated value "{value}" is not recognized (it is not listed in allowed_values).'
+            )
 
     def __str__(self):
         """Returns human-readable representation of the preference.
@@ -259,7 +267,7 @@ class NumericalPreference(Preference):
         Returns:
             str: Human-readable preference details.
         """
-        return f"NumericalPreference(\n\tpreferred_range={self.preferred_range}, \n\tpreferred_score={self.preferred_score}, \n\tnonpreferred_score={self.nonpreferred_score}, \n\tdistance_sensitive={self.distance_sensitive}, \n\tcompatibility_weight={self.compatibility_weight}, \n\tcompatibility_fn={self.compatibility_fn}\n)"
+        return f"NumericalPreference(\n\tpreferred_range={self.preferred_range}, \n\tpreferred_score={self.preferred_score}, \n\tnonpreferred_score={self.nonpreferred_score}, \n\tdistance_sensitive={self.distance_sensitive}, \n\tcompatibility_weight={self.compatibility_weight}, \n\tcompatibility_fn={self.compatibility_fn if hasattr(self, 'compatibility_fn') else None}\n)"
 
     def __repr__(self):
         """Like __str__, returns human-readable representation of the preference.
@@ -267,4 +275,53 @@ class NumericalPreference(Preference):
         Returns:
             str: Human-readable preference details.
         """
-        return f"NumericalPreference(\n\tpreferred_range={self.preferred_range}, \n\tpreferred_score={self.preferred_score}, \n\tnonpreferred_score={self.nonpreferred_score}, \n\tdistance_sensitive={self.distance_sensitive}, \n\tcompatibility_weight={self.compatibility_weight}, \n\tcompatibility_fn={self.compatibility_fn}\n)"
+        return f"NumericalPreference(\n\tpreferred_range={self.preferred_range}, \n\tpreferred_score={self.preferred_score}, \n\tnonpreferred_score={self.nonpreferred_score}, \n\tdistance_sensitive={self.distance_sensitive}, \n\tcompatibility_weight={self.compatibility_weight}, \n\tcompatibility_fn={self.compatibility_fn if hasattr(self, 'compatibility_fn') else None}\n)"
+
+
+class DictBasedPreference(Preference):
+    def __init__(
+        self,
+        compatibility_dict,
+        default_value=None,
+        compatibility_weight=1,
+    ):
+        """Initializes the dictionary-based preference with the provided properties.
+
+        Args:
+            compatibility_dict (dict): A dictionary that maps attribute values to compatibility scores.
+            default_value (Any, optional): A default compatibility value to be returned when the evaluated value does not exist
+                in the dictionary. Defaults to None.
+            compatibility_weight (float, optional): Weight multiplier used to set the attribute preference's weight in
+                the overall compatibility. Defaults to 1.
+        """
+        self.compatibility_dict = compatibility_dict
+        self.default_value = default_value
+        self.compatibility_weight = compatibility_weight
+
+    def evaluate_attribute(self, value):
+        """Evaluates a candidate's attribute, comparing it with the preferred value range and returning an
+        attribute-specific compatibility score.
+
+        Args:
+            value (float): Candidate's attribute value.
+
+        Returns:
+            float: Attribute-specific compatibility score.
+        """
+        return self.compatibility_dict.get(value, self.default_value)
+
+    def __str__(self):
+        """Returns human-readable representation of the preference.
+
+        Returns:
+            str: Human-readable preference details.
+        """
+        return f"DictPreference(\n\tcompatibility_dict={self.compatibility_dict}, \n\tdefault_value={self.default_value}, \n\tcompatibility_weight={self.compatibility_weight})"
+
+    def __repr__(self):
+        """Like __str__, returns human-readable representation of the preference.
+
+        Returns:
+            str: Human-readable preference details.
+        """
+        return f"DictPreference(\n\tcompatibility_dict={self.compatibility_dict}, \n\tdefault_value={self.default_value}, \n\tcompatibility_weight={self.compatibility_weight})"

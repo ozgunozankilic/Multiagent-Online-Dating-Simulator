@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "catfish-sim"
-version = "0.1.1"
+version = "0.2.0"
 authors = [{ name = "Oz Kilic", email = "ozgunozankilic@gmail.com" }]
 description = "A multiagent online dating simulation framework."
 license = { file = "LICENSE" }

@@ -4,6 +4,13 @@ import scipy.stats
 import math
 import os
 
+LLCP2022_AGE_GROUP_RANGE = [1, 13]
+LLCP2022_HEIGHT_RANGE = [91, 241]
+LLCP2022_BMI_GROUP_RANGE = [1, 4]
+LLCP2022_DATA = pd.read_csv(
+    os.path.join(os.path.dirname(__file__), "data/LLCP2022_sex_age_height_bmi.csv")
+)
+
 
 def get_random_gender(male_weight=0.72):
     """Samples gender.
@@ -60,7 +67,7 @@ def get_agent_stats(agents):
 
 
 def sample_bmi_from_sex_age(sex, age_group):
-    """Samples a weight group based on the provided sex and age group based on the data. Based on CCLP2022:
+    """Samples a weight group based on the provided sex and age group based on the data. Based on LLCP2022:
     https://www.cdc.gov/brfss/annual_data/annual_2022.html
 
     Args:
@@ -245,7 +252,7 @@ def sample_bmi_from_sex_age(sex, age_group):
 
 
 def sample_age_from_sex(sex, consider_dating_population=True):
-    """Samples age from sex (based on CCLP2022: https://www.cdc.gov/brfss/annual_data/annual_2022.html) and optionally
+    """Samples age from sex (based on LLCP2022: https://www.cdc.gov/brfss/annual_data/annual_2022.html) and optionally
     calibrates the probabilities according to online dating age penetration distribution (based on
     https://www.pewresearch.org/short-reads/2023/02/02/key-findings-about-online-dating-in-the-u-s/).
 
@@ -320,17 +327,14 @@ def sample_age_from_sex(sex, consider_dating_population=True):
     )
 
 
-def sample_height_from_sex_age(
-    sex, age_group, dataset="data/LLCP2022_sex_age_height_bmi.csv"
-):
-    """Samples height from the provided sex and age group (based on CCLP2022:
+def sample_height_from_sex_age(sex, age_group):
+    """Samples height from the provided sex and age group (based on LLCP2022:
     https://www.cdc.gov/brfss/annual_data/annual_2022.html).
 
     Args:
         sex (str): "Male" or "Female."
         age_group (str|int): Age group ID (1: 18-24, 2: 25-29, 3: 30-34, 4: 35-39, 5: 40-44, 6: 45-49, 7: 50-54,
             8: 55-59, 9: 60-64, 10: 65-69, 11: 70-74, 12: 75-79, 13: 80+).
-        dataset (str, optional): LLCP2022 dataset location. Defaults to "../LLCP2022_sex_age_height_bmi.csv".
 
     Returns:
         int: Rounded sampled height.
@@ -341,7 +345,7 @@ def sample_height_from_sex_age(
         sex = 2
     age = int(age_group)
 
-    dataset = pd.read_csv(os.path.join(os.path.dirname(__file__), dataset))
+    dataset = LLCP2022_DATA
 
     kde = scipy.stats.gaussian_kde(
         dataset[
@@ -416,21 +420,18 @@ def sample_age_preference(sex, age_group, allowed_diff=3):
     return preference
 
 
-def get_height_preference(
-    gender, height, dataset="data/LLCP2022_sex_age_height_bmi.csv"
-):
-    """Deterministically obtains a height preference range for a given gender and height.
+def get_height_preference(gender, height):
+    """Deterministically obtains a height preference range for a given gender and height. Uses the height range from
+    LLCP2022 data.
 
     Args:
         gender (str): Agent gender.
         height (int): Agent height.
-        dataset (str, optional): LLCP2022 dataset location. Defaults to "data/LLCP2022_sex_age_height_bmi.csv".
 
     Returns:
         list: Height preference range, as [min, max].
     """
-    dataset = pd.read_csv(os.path.join(os.path.dirname(__file__), dataset))
-    allowed_height_range = [dataset["HTM4"].min(), dataset["HTM4"].max()]
+    allowed_height_range = LLCP2022_HEIGHT_RANGE
 
     if gender == "Male":
         return [

@@ -161,6 +161,83 @@ def test_matchmaker():
     assert len(twosided_preferential_matcher.recommendation_priority[0]) == 0
     assert len(twosided_preferential_matcher.recommendation_priority[1]) == 0
 
+    inconsiderate_ranked_matcher = matchers.RankedAgentMatcher(
+        agents=[male_agent, female_agent],
+        recommendation_limit=100,
+        compatibility_calculator=compatibility.CompatibilityCalculator(),
+        consider_dealbreakers=False,
+    )
+
+    # The matcher does not cares about anyone's deal-breakers, so both agents are deemed compatible.
+    assert (
+        len(
+            inconsiderate_ranked_matcher.get_available_candidates(
+                inconsiderate_ranked_matcher.agents[0]
+            )
+        )
+        == 1
+    )
+    assert (
+        len(
+            inconsiderate_ranked_matcher.get_available_candidates(
+                inconsiderate_ranked_matcher.agents[1]
+            )
+        )
+        == 1
+    )
+
+    selfish_ranked_matcher = matchers.RankedAgentMatcher(
+        agents=[male_agent, female_agent],
+        recommendation_limit=100,
+        compatibility_calculator=compatibility.CompatibilityCalculator(),
+        consider_dealbreakers=True,
+        dealbreaker_judger_weight=1,
+    )
+
+    # The matcher only cares about the judger's viewpoint, so the male has a candidate while the female does not.
+    assert (
+        len(
+            selfish_ranked_matcher.get_available_candidates(
+                selfish_ranked_matcher.agents[0]
+            )
+        )
+        == 1
+    )
+    assert (
+        len(
+            selfish_ranked_matcher.get_available_candidates(
+                selfish_ranked_matcher.agents[1]
+            )
+        )
+        == 0
+    )
+
+    twosided_ranked_matcher = matchers.RankedAgentMatcher(
+        agents=[male_agent, female_agent],
+        recommendation_limit=100,
+        compatibility_calculator=compatibility.CompatibilityCalculator(),
+        consider_dealbreakers=True,
+        dealbreaker_judger_weight=0.5,
+    )
+
+    # The matcher cares about both viewpoints, so no agent has a candidate, as one side of the match is incompatible.
+    assert (
+        len(
+            twosided_ranked_matcher.get_available_candidates(
+                twosided_ranked_matcher.agents[0]
+            )
+        )
+        == 0
+    )
+    assert (
+        len(
+            twosided_ranked_matcher.get_available_candidates(
+                twosided_ranked_matcher.agents[1]
+            )
+        )
+        == 0
+    )
+
 
 def test_preference():
     """Ensures that a non-preferred value with strict misrepresentation affects the perceived compatibility scores."""
