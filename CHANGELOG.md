@@ -9,6 +9,7 @@ Notable changes are listed below.
 - `DictBasedPreference`: A new preference class that can be used to exactly specify the compatibility score for all attribute values. While `CategoricalPreference` class was able to handle value-compatibility dictionaries, `DictBasedPreference` allows setting a default compatibility score for attribute values that are not specified, and its parameters are more intuitive to use with a dictionary.
 - A "getting started" tutorial in the documentation.
 - Missing parameter explanations in the docstrings.
+- LLCP2022 dataset ranges for age, height, and BMI for ease of use.
 
 ### Changed
 
